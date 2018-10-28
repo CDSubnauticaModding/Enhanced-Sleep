@@ -9,7 +9,15 @@ namespace Subnautica_Enhanced_Sleep
 {
     class SleepPatcher
     {
+        public static FMODAsset FMA_nosleep_tooThirsty = new FMODAsset();
+
+
         public static float wentToSleep = 0;
+
+        public static void invokeAssets()
+        {
+
+        }
 
         [HarmonyPatch(typeof(Bed))]
         [HarmonyPatch("EnterInUseMode")]
@@ -79,13 +87,14 @@ namespace Subnautica_Enhanced_Sleep
                 double minuteTimeSlept = hourTimeSlept * 60;
 
                 double looseFactor = 0.5;
-                double foodLost = minuteTimeSlept / (25.20 * looseFactor);
-                double waterLost = minuteTimeSlept / (18.00 * looseFactor);
+                double foodLost = minuteTimeSlept / (25.20 / looseFactor); // factor * looseFactor : looseFactor would be 2 to halfe the time.
+                double waterLost = minuteTimeSlept / (18.00 / looseFactor);
                 float foodAfter = foodBefore - (float)foodLost;
                 float waterAfter = waterBefore - (float)waterLost;
                 if (foodAfter > 5 ) {sv.food = foodAfter;} else {sv.food = 5;}
                 if (waterAfter > 5) { sv.water = waterAfter; } else { sv.water = 5; }
                 Main.Log("!!Left Bed:\nWent to Bed Time: " + wentToSleep + "\nWoke up: " + stoodUp + "\nDuration: " + timeSlept + "\nDuration in IGHours: " + hourTimeSlept + "\nDuration in IGMinutes: " + minuteTimeSlept + "\nFood Before: " + sv.food + "\nFood Lost: " + foodLost + "\nFood After: " + sv.food + "\nWater Before: " + waterBefore + "\nWater Lost: " + waterLost + "\nWater After: " + sv.water);
+                
                 
             }
         }
