@@ -22,8 +22,9 @@ namespace Subnautica_Enhanced_Sleep
         {
             if (Player.main != null)
             {
-                Tiredness.tirednessDict.TryGetValue(Player.main, out float _tir);
-                TirednessGui.currentTiredness = "" + _tir;
+                float _tir = Tiredness.tiredness;
+                //Tiredness.tirednessDict.TryGetValue(Player.main, out float _tir);
+                TirednessGui.currentTiredness = "Tir=" + _tir;
                 TirednessGui.currentTirednessV = ( _tir > 100 ? 100 : _tir);
             }
         }
@@ -43,16 +44,19 @@ namespace Subnautica_Enhanced_Sleep
                 style.normal.textColor = Color.white;
                 style.fontSize = 16;
                 GUI.Label(new Rect(100, 100, 400, 100), currentTiredness, style);
-                Texture2D txOrange = new Texture2D(1, 1);
-                txOrange.wrapMode = TextureWrapMode.Repeat;
-                txOrange.SetPixel(0, 0, Color.cyan);
-                txOrange.Apply();
+                Texture2D txBar = new Texture2D(1, 1);
+                txBar.wrapMode = TextureWrapMode.Repeat;
+                txBar.SetPixel(0, 0, new Color(0, 125, 130, 255));
+                // COLORS
+                //  0 125 130
+                //  0 145 140
+                txBar.Apply();
                 Texture2D txBlack = new Texture2D(1, 1);
                 txBlack.wrapMode = TextureWrapMode.Repeat;
                 txBlack.SetPixel(0, 0, new Color(0, 0, 0, 255));
                 txBlack.Apply();
-                GUI.DrawTexture(new Rect(50, Screen.height - 50, 100, 20), txBlack);
-                GUI.DrawTexture(new Rect(50, Screen.height - 50, (100 / 100) * currentTirednessV, 20), txOrange);
+                GUI.DrawTexture(new Rect(20, Screen.height - 80, 100, 20), txBlack);
+                GUI.DrawTexture(new Rect(20, Screen.height - 80, (100 / 100) * currentTirednessV, 20), txBar);
                 GUIStyle styleprog = new GUIStyle();
                 styleprog.alignment = TextAnchor.MiddleCenter;
                 if (currentTirednessV >= 50)
@@ -63,7 +67,7 @@ namespace Subnautica_Enhanced_Sleep
                 {
                     styleprog.normal.textColor = Color.white;
                 }
-                GUI.Label(new Rect(50, Screen.height - 50, 100, 20), "" + (float) Math.Floor(currentTirednessV), styleprog);
+                GUI.Label(new Rect(20, Screen.height - 80, 100, 20), "" + (float) Math.Floor(currentTirednessV), styleprog);
             }
         }
 

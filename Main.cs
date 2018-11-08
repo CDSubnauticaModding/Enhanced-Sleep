@@ -11,7 +11,7 @@ namespace Subnautica_Enhanced_Sleep
     public class Main : MonoBehaviour
     {
         public static HarmonyInstance hinstance;
-        
+
         public static string fileName;
         public static string logDir;
 
@@ -40,7 +40,8 @@ namespace Subnautica_Enhanced_Sleep
         {
             Console.WriteLine("[Enhanced Sleep] <" + DateTime.Now.ToString("HH:mm:ss") + "> " + message);
             logDir = Path.GetDirectoryName(Assembly.GetCallingAssembly().Location);
-            File.AppendAllText(logDir + "/" + fileName, "<" + DateTime.Now.ToString("HH:mm:ss") + "> " + message + "\n");
+            File.AppendAllText(logDir + "/" + fileName,
+                "<" + DateTime.Now.ToString("HH:mm:ss") + "> " + message + "\n");
         }
 
         public static string getLog()
@@ -54,8 +55,11 @@ namespace Subnautica_Enhanced_Sleep
             return s;
         }
 
-        
-        
+        public static string GetSaveGameDir()
+        {
+            return Path.Combine(Path.Combine(Path.GetFullPath("SNAppData"), "SavedGames"), Utils.GetSavegameDir());
+        }
+
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
@@ -74,6 +78,44 @@ namespace Subnautica_Enhanced_Sleep
             {
                 Log("Unloading Tiredness.");
                 Tiredness.onDisable();
+            }
+        }
+
+        public class EnhancedSleepComp : MonoBehaviour
+        {
+            public static EnhancedSleepComp _instance = null;
+            public static bool isSaving = false;
+
+            public void Awake()
+            {
+                EnhancedSleepComp._instance = this;
+            }
+
+            public void Update()
+            {
+                bool _saving = SaveLoadManager.main.isSaving;
+
+                if (!isSaving && _saving)
+                {
+                    isSaving = true;
+                    Main.Log("[DEBUG] Saving Tiredness");
+                    Tiredness.SaveTiredness();
+                    Main.Log("[DEBUG] Saved Tiredness");
+                }
+                else if (!_saving)
+                {
+                    isSaving = false;
+
+                }
+                else
+                {
+
+                }
+            }
+
+            public static void Load()
+            {
+                GameObject gameObject = new GameObject("EnhancedSleepComp").AddComponent<EnhancedSleepComp>().gameObject;
             }
         }
     }

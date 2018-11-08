@@ -1,29 +1,43 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using Harmony;
+using Oculus.Newtonsoft.Json;
 using UnityEngine;
 
 namespace Subnautica_Enhanced_Sleep
 {
     public class Tiredness : MonoBehaviour
     {
+        /*
         public static Dictionary<Player, float> tirednessDict;
         public static Dictionary<Player, float> tirednessLastUpdateH;
         public static Dictionary<Player, float> tirednessLastUpdateD;
+        */
+        public static float tiredness;
+        public static float lastUpdate;
         public static bool isIngame = false;
         public static bool wasSleepIntroSent = false;
 
         public static void onEnable()
         {
             isIngame = true;
+            /*
             tirednessDict = new Dictionary<Player, float>();
             tirednessLastUpdateH = new Dictionary<Player, float>();
-            tirednessLastUpdateD = new Dictionary<Player, float>();
+            */
+            tiredness = 0;
+            lastUpdate = 0;
+            //tirednessLastUpdateD = new Dictionary<Player, float>();
+            Tiredness.LoadTiredness();
+            Main.EnhancedSleepComp.Load();
             TirednessGui.Load();
+            SleepGui.Load();
+            
             /*
-            if (!wasSleepIntroSent)
+            if (!wasSleepIntroSent && Player.main.justSpawned)
             {
                 gameStartSleepIntroNotification01.Play();
                 gameStartSleepIntroNotification02.Play();
@@ -35,9 +49,13 @@ namespace Subnautica_Enhanced_Sleep
         public static void onDisable()
         {
             isIngame = false;
+            /*
             tirednessDict = null;
             tirednessLastUpdateH = null;
             tirednessLastUpdateD = null;
+            */
+            tiredness = 0;
+            lastUpdate = 0;
         }
 
         [HarmonyPatch(typeof(Player))]
@@ -46,10 +64,16 @@ namespace Subnautica_Enhanced_Sleep
         {
             public static void Postfix(Player __instance)
             {
-                if (isIngame && !uGUI.main.loading.IsLoading && !uGUI.main.intro.showing && tirednessDict != null && tirednessLastUpdateH != null && tirednessLastUpdateD != null)
+                if (isIngame && !uGUI.main.loading.IsLoading && !uGUI.main.intro.showing /*&& tirednessDict != null && tirednessLastUpdateH != null *//* && tirednessLastUpdateD != null*/)
                 {
+                    /*
+                    if (tirednessLastUpdateH.ContainsKey(__instance)&& tirednessDict.ContainsKey(__instance))
+                    {
+                    */
+                    /*
                     if (tirednessLastUpdateH.ContainsKey(__instance) && tirednessLastUpdateD.ContainsKey(__instance) && tirednessDict.ContainsKey(__instance))
                     {
+                    */
                         /*
                         tirednessDict.TryGetValue(__instance, out float playerTiredness);
                         tirednessLastUpdateH.TryGetValue(__instance, out float oldHour);
@@ -85,35 +109,90 @@ namespace Subnautica_Enhanced_Sleep
                         }
                         */
                         // NEW VARIANT
-
-                        tirednessDict.TryGetValue(__instance, out float playerTiredness);
-                        tirednessLastUpdateH.TryGetValue(__instance, out float oldTime);
-                        float newTime = (float)DayNightCycle.main.GetDayNightCycleTime() + (float)Math.Floor(DayNightCycle.main.GetDay());
-                        float timePassed = newTime - oldTime;
-                        float timePassedHours = (float)(timePassed / (1d / 24));
-                        float timePassedMinutes = (float)(timePassedHours * 60);
-                        float looseFactor = 4;
-                        if (timePassedMinutes >= 2)
+                        if ((float) Math.Floor(DayNightCycle.main.GetDay()) >= 8 && !(lastUpdate > ((float)DayNightCycle.main.GetDayNightCycleTime() + (float)Math.Floor(DayNightCycle.main.GetDay()))) )
                         {
-                            float tirednessAdded = (float)(timePassedMinutes / (43.2 / looseFactor));
-                            float tirednessOut = (float)(playerTiredness + tirednessAdded);
-                            if (tirednessOut > 100)
+                            /*
+                            tirednessDict.TryGetValue(__instance, out float playerTiredness);
+                            tirednessLastUpdateH.TryGetValue(__instance, out float oldTime);
+                            */
+                            float playerTiredness = tiredness;
+                            float oldTime = lastUpdate;
+                            float newTime = (float) DayNightCycle.main.GetDayNightCycleTime() +
+                                            (float) Math.Floor(DayNightCycle.main.GetDay());
+                            float timePassed = newTime - oldTime;
+                            float timePassedHours = (float) (timePassed / (1d / 24));
+                            float timePassedMinutes = (float) (timePassedHours * 60);
+                            float looseFactor = 1;
+                            float recoverFactor = 6;
+                            if (SleepPatcher.isSleeping)
                             {
-                                tirednessOut = 100;
+                                if (timePassedMinutes >= 1)
+                                {
+                                    float tirednessAdded = (float)(timePassedMinutes / (43.2 / recoverFactor));
+                                    float tirednessOut = (float)(playerTiredness - tirednessAdded);
+                                    if (tirednessOut > 100)
+                                    {
+                                        tirednessOut = 100;
+                                    } else if (tirednessOut < 0)
+                                    {
+                                        tirednessOut = 0;
+                                    }
+                                    /*
+                                    tirednessDict[__instance] = tirednessOut;
+                                    tirednessLastUpdateH[__instance] = newTime;
+                                    */
+                                    tiredness = tirednessOut;
+                                    lastUpdate = newTime;
+                                }
                             }
-                            tirednessDict[__instance] = tirednessOut;
-                            tirednessLastUpdateH[__instance] = newTime;
-                            float tirednessNotifyValue = 25f;
-                            float tirednessWarningNotifyValue = 50f;
-                            if (playerTiredness < tirednessNotifyValue && tirednessOut >= tirednessNotifyValue && tirednessOut < tirednessWarningNotifyValue)
+                            else
                             {
-                                //tiredNotification.Play();
-                            }
-                            else if (playerTiredness < tirednessWarningNotifyValue && tirednessOut >= tirednessNotifyValue)
-                            {
-                                //tiredWarningNotification.Play();
+                                if (timePassedMinutes >= 2)
+                                {
+                                    float tirednessAdded = (float) (timePassedMinutes / (43.2 / looseFactor));
+                                    float tirednessOut = (float) (playerTiredness + tirednessAdded);
+                                    if (tirednessOut > 100)
+                                    {
+                                        tirednessOut = 100;
+                                    }
+                                    else if (tirednessOut < 0)
+                                    {
+                                        tirednessOut = 0;
+                                    }
+                                    /*
+                                    tirednessDict[__instance] = tirednessOut;
+                                    tirednessLastUpdateH[__instance] = newTime;
+                                    */
+                                    tiredness = tirednessOut;
+                                    lastUpdate = newTime;
+                                    float tirednessNotifyValue = 25f;
+                                    float tirednessWarningNotifyValue = 50f;
+                                    if (playerTiredness < tirednessNotifyValue &&
+                                        tirednessOut >= tirednessNotifyValue &&
+                                        tirednessOut < tirednessWarningNotifyValue)
+                                    {
+                                        //tiredNotification.Play();
+                                    }
+                                    else if (playerTiredness < tirednessWarningNotifyValue &&
+                                             tirednessOut >= tirednessNotifyValue)
+                                    {
+                                        //tiredWarningNotification.Play();
+                                    }
+                                }
                             }
                         }
+                        else if ((lastUpdate > ((float)DayNightCycle.main.GetDayNightCycleTime() + (float)Math.Floor(DayNightCycle.main.GetDay()))))
+                        {
+                            
+                        }
+                        else
+                        {
+                            float newTime = (float)DayNightCycle.main.GetDayNightCycleTime() +
+                                            (float)Math.Floor(DayNightCycle.main.GetDay());
+                            //tirednessLastUpdateH[__instance] = newTime;
+                            lastUpdate = newTime;
+                        }
+                    /*
                     }
                     else
                     {
@@ -132,38 +211,21 @@ namespace Subnautica_Enhanced_Sleep
                                 //tirednessLastUpdateH.Add(__instance, DayNightCycle.main.GetDayNightCycleTime());
                                 tirednessLastUpdateH.Add(__instance, (float)DayNightCycle.main.GetDayNightCycleTime() + (float)Math.Floor(DayNightCycle.main.GetDay()));
                             }
-                            if (tirednessLastUpdateD.ContainsKey(__instance))
-                            {
-                                tirednessLastUpdateD[__instance] = (float)Math.Floor(DayNightCycle.main.GetDay());
-                            }
-                            else
-                            {
-                                tirednessLastUpdateD.Add(__instance, (float)Math.Floor(DayNightCycle.main.GetDay()));
-                            }
                         }
                         else
                         {
                             tirednessDict.Add(__instance, 0);
                             if (tirednessLastUpdateH.ContainsKey(__instance))
                             {
-                                //tirednessLastUpdateH[__instance] = DayNightCycle.main.GetDayNightCycleTime();
                                 tirednessLastUpdateH[__instance] = (float)DayNightCycle.main.GetDayNightCycleTime() + (float)Math.Floor(DayNightCycle.main.GetDay());
                             }
                             else
                             {
-                                //tirednessLastUpdateH.Add(__instance, DayNightCycle.main.GetDayNightCycleTime());
                                 tirednessLastUpdateH.Add(__instance, (float)DayNightCycle.main.GetDayNightCycleTime() + (float)Math.Floor(DayNightCycle.main.GetDay()));
-                            }
-                            if (tirednessLastUpdateD.ContainsKey(__instance))
-                            {
-                                tirednessLastUpdateD[__instance] = (float)Math.Floor(DayNightCycle.main.GetDay());
-                            }
-                            else
-                            {
-                                tirednessLastUpdateD.Add(__instance, (float)Math.Floor(DayNightCycle.main.GetDay()));
                             }
                         }
                     }
+                    */
                     
                 }
             }
@@ -194,6 +256,7 @@ namespace Subnautica_Enhanced_Sleep
             tiredWarningNotification.text = "You are really tired. Find some sleep immediately.";
         }
 
+        /*
         public class TirednessSOHData
         {
             public Dictionary<Player, float> tirednessDict;
@@ -220,6 +283,62 @@ namespace Subnautica_Enhanced_Sleep
             else
             {
                 return new Dictionary<Player, float>();
+            }
+        }
+        */
+
+        /*
+        [Serializable]
+        internal class TirednessSaveData
+        {
+            public Dictionary<Player, float> TirednessDict { get; set; }
+            public Dictionary<Player, float> TirednessLastUpdateH { get; set; }
+        }
+        */
+
+        [Serializable]
+        internal class TirednessSaveData
+        {
+            public float _tiredness { get; set; }
+            public float _lastUpdate { get; set; }
+        }
+
+        public static void SaveTiredness()
+        {
+            TirednessSaveData saveData = new TirednessSaveData
+            {
+                /*
+                TirednessDict = tirednessDict,
+                TirednessLastUpdateH = tirednessLastUpdateH
+                */
+                _tiredness = tiredness,
+                _lastUpdate = lastUpdate
+            };
+            string sSaveData = JsonConvert.SerializeObject(saveData);
+            Directory.CreateDirectory(Main.GetSaveGameDir());
+            File.Create(Main.GetSaveGameDir() + "/tiredness.json").Close();
+            File.WriteAllText(Main.GetSaveGameDir() + "/tiredness.json", sSaveData);
+        }
+
+        public static void LoadTiredness()
+        {
+            if (File.Exists(Main.GetSaveGameDir() + "/tiredness.json"))
+            {
+                string loadData = File.ReadAllText(Main.GetSaveGameDir() + "/tiredness.json");
+                TirednessSaveData saveDataT = JsonConvert.DeserializeObject<TirednessSaveData>(loadData);
+                /*
+                tirednessDict = saveDataT.TirednessDict;
+                tirednessLastUpdateH = saveDataT.TirednessLastUpdateH;
+                */
+                tiredness = saveDataT._tiredness;
+                lastUpdate = saveDataT._lastUpdate;
+            }
+            else
+            {
+                tiredness = 0;
+                lastUpdate = (float)DayNightCycle.main.GetDayNightCycleTime() +
+                             (float)Math.Floor(DayNightCycle.main.GetDay());
+
             }
         }
     }

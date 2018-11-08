@@ -57,6 +57,10 @@
       <HintPath>D:\Programme\Steam\steamapps\common\Subnautica\Subnautica_Data\Managed\Assembly-UnityScript-firstpass.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>D:\Programme\Steam\steamapps\common\Subnautica\Subnautica_Data\Managed\Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Transactions" />
@@ -94,6 +98,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SleepPatcher.cs" />
     <Compile Include="Tiredness.cs" />
+    <Compile Include="SleepGui.cs" />
     <Compile Include="TirednessGui.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -102,4 +107,7 @@
     </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>XCOPY "$(TargetDir)*" "D:\Programme\Steam\steamapps\common\Subnautica\QMods\SubnauticaEnhancedSleep" /S /Y</PostBuildEvent>
+  </PropertyGroup>
 </Project>
