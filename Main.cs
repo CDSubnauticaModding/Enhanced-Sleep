@@ -12,6 +12,9 @@ namespace Subnautica_Enhanced_Sleep
     {
         public static HarmonyInstance hinstance;
 
+        public static bool isBeta = true;
+        public static bool isDev = true;
+
         public static string fileName;
         public static string logDir;
 
@@ -27,6 +30,8 @@ namespace Subnautica_Enhanced_Sleep
                 SceneManager.sceneLoaded += OnSceneLoaded;
                 SceneManager.sceneUnloaded += OnSceneUnloaded;
                 hinstance.PatchAll(Assembly.GetExecutingAssembly());
+                if (isDev) Log("Keep in mind that this is a developer version.");
+                else if (isBeta) Log("Keep in mind that this is a beta version.");
                 Log("Patched Successfully");
             }
             catch (Exception ex)

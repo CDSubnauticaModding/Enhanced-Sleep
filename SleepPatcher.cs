@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Text;
 using Harmony;
 using UnityEngine;
+using UnityEngine.Assertions.Must;
 
 namespace Subnautica_Enhanced_Sleep
 {
@@ -16,6 +17,7 @@ namespace Subnautica_Enhanced_Sleep
 
         public static float wentToSleep = 0;
         public static float wentToSleepD = 0;
+        public static float lastUpdate = 0;
         public static bool isSleeping = false;
         public static bool isSkippingTime = false;
         public static bool buttonReleasedSinceSkipping = false;
@@ -23,7 +25,7 @@ namespace Subnautica_Enhanced_Sleep
         public static readonly bool useCustomSleepTime = true;
         public static readonly float customSleepTime = 500f;
         public static readonly float customSleepRTime = 20f;
-        public static double looseFactor = 0.5;
+        
 
         public static void invokeAssets()
         {
@@ -116,6 +118,7 @@ namespace Subnautica_Enhanced_Sleep
             private static void Postfix(Bed __instance, Player player)
             {
                 isSleeping = false;
+                /*
                 if (!GameModeUtils.IsOptionActive(GameModeOption.Survival)) return;
                 player.liveMixin.health = player.liveMixin.maxHealth;
                 player.liveMixin.health = player.liveMixin.maxHealth;
@@ -124,6 +127,7 @@ namespace Subnautica_Enhanced_Sleep
                 float foodBefore = sv.food;
                 float waterBefore = sv.water;
                 float timeSlept = 0;
+                double looseFactor = 0.5;
                 if (wentToSleep > 0.5)
                 {
                     timeSlept = (((DayNightCycle.main.GetDayNightCycleTime() + 1) - wentToSleep));
@@ -145,7 +149,94 @@ namespace Subnautica_Enhanced_Sleep
                 if (waterAfter > 5) { sv.water = waterAfter; } else { sv.water = 5; }
                 Main.Log("!!Left Bed:\nWent to Bed Time: " + wentToSleep + "\nWoke up: " + stoodUp + "\nDuration: " + timeSlept + "\nDuration in IGHours: " + hourTimeSlept + "\nDuration in IGMinutes: " + minuteTimeSlept + "\nFood Before: " + sv.food + "\nFood Lost: " + foodLost + "\nFood After: " + sv.food + "\nWater Before: " + waterBefore + "\nWater Lost: " + waterLost + "\nWater After: " + sv.water);
                 
-                
+                */
+            }
+        }
+
+        [HarmonyPatch(typeof(Player))]
+        [HarmonyPatch("Update")]
+        public class PlayerSleepPatch
+        {
+            public static void Postfix(Player __instance)
+            {
+                if (Tiredness.isIngame && !uGUI.main.loading.IsLoading && !uGUI.main.intro.showing)
+                {
+                    if (isSleeping)
+                    {
+                        float oldTime = lastUpdate;
+                        float newTime = (float)DayNightCycle.main.GetDayNightCycleTime() +
+                                        (float)Math.Floor(DayNightCycle.main.GetDay());
+                        float timePassed = newTime - oldTime;
+                        float timePassedHours = (float)(timePassed / (1d / 24));
+                        float timePassedMinutes = (float)(timePassedHours * 60);
+                        double looseFactor = 0.5;
+                        double recoverFactor = 1;
+                        if (timePassedMinutes >= 1)
+                        {
+                            if (GameModeUtils.IsOptionActive(GameModeOption.NoSurvival))
+                            {
+                                float healthAdded = (float)(timePassedMinutes / (4.8 / recoverFactor));
+                                float healthOut = (float)(__instance.liveMixin.health + healthAdded);
+
+                                if (healthOut < 0)
+                                {
+                                    healthOut = 0;
+                                }
+
+                                if (healthOut >= __instance.liveMixin.maxHealth)
+                                {
+                                    healthOut = __instance.liveMixin.maxHealth;
+                                }
+
+                                __instance.liveMixin.health = healthOut;
+                            }
+                            else
+                            {
+                                //__instance.liveMixin.health = __instance.liveMixin.maxHealth;
+                                //__instance.liveMixin.health = __instance.liveMixin.maxHealth;
+                                Survival sv = __instance.GetComponent<Survival>();
+                                float foodLost = (float)(timePassedMinutes / (25.20 / looseFactor));
+                                float foodOut = (float)(sv.food - foodLost);
+                                float waterLost = (float)(timePassedMinutes / (18.00 / looseFactor));
+                                float waterOut = (float)(sv.water - waterLost);
+                                float healthAdded = (float)(timePassedMinutes / (4.8 / recoverFactor));
+                                float healthOut = (float)(__instance.liveMixin.health + healthAdded);
+
+                                if (waterOut <= 0)
+                                {
+                                    waterOut = 0;
+                                }
+
+                                if (foodOut <= 0)
+                                {
+                                    foodOut = 0;
+                                }
+
+                                if (healthOut < 0)
+                                {
+                                    healthOut = 0;
+                                }
+
+                                if (healthOut >= __instance.liveMixin.maxHealth)
+                                {
+                                    healthOut = __instance.liveMixin.maxHealth;
+                                }
+
+                                sv.water = waterOut;
+                                sv.food = foodOut;
+                                __instance.liveMixin.health = healthOut;
+                            }
+                            lastUpdate = (float)DayNightCycle.main.GetDayNightCycleTime() +
+                                         (float)Math.Floor(DayNightCycle.main.GetDay());
+                        }
+                        
+                    }
+                    else
+                    {
+                        lastUpdate = (float)DayNightCycle.main.GetDayNightCycleTime() +
+                                     (float)Math.Floor(DayNightCycle.main.GetDay());
+                    }
+                }
             }
         }
 
@@ -158,33 +249,43 @@ namespace Subnautica_Enhanced_Sleep
                 if (Tiredness.isIngame && !uGUI.main.loading.IsLoading && !uGUI.main.intro.showing)
                 {
                     bool keyDown = Input.GetKeyDown(KeyCode.N);
-                    if (keyDown && isSleeping)
+                    bool consoleOpened = (bool)typeof(DevConsole).GetField("state",
+                        BindingFlags.NonPublic | BindingFlags.Instance).GetValue(typeof(DevConsole).GetField("instance",
+                        BindingFlags.NonPublic | BindingFlags.Static).GetValue(null));
+                    if (!uGUI.main.userInput.focused && !consoleOpened)
                     {
-                        DayNightCycle.main.StopSkipTimeMode();
-                        buttonReleasedSinceSkipping = false;
-                    }
-                    else if (keyDown)
-                    {
-                        if (buttonReleasedSinceSkipping)
+                        if (keyDown && isSleeping)
                         {
-                            if (isSkippingTime)
+                            DayNightCycle.main.StopSkipTimeMode();
+                            buttonReleasedSinceSkipping = false;
+                        }
+                        else if (keyDown)
+                        {
+                            if (buttonReleasedSinceSkipping)
                             {
-                                Player.main.cinematicModeActive = false;
-                                isSkippingTime = false;
-                                DayNightCycle.main.StopSkipTimeMode();
-                            }
-                            else
-                            {
-                                if (!Player.main.cinematicModeActive)
+                                if (isSkippingTime)
                                 {
-                                    Player.main.cinematicModeActive = true;
-                                    isSkippingTime = true;
-                                    DayNightCycle.main.SkipTime(1000f, 20f);
+                                    Player.main.cinematicModeActive = false;
+                                    isSkippingTime = false;
+                                    DayNightCycle.main.StopSkipTimeMode();
+                                }
+                                else
+                                {
+                                    if (!Player.main.cinematicModeActive)
+                                    {
+                                        Player.main.cinematicModeActive = true;
+                                        isSkippingTime = true;
+                                        DayNightCycle.main.SkipTime(1000f, 20f);
+                                    }
                                 }
                             }
-                        }
 
-                        buttonReleasedSinceSkipping = false;
+                            buttonReleasedSinceSkipping = false;
+                        }
+                        else
+                        {
+                            buttonReleasedSinceSkipping = true;
+                        }
                     }
                     else
                     {

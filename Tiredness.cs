@@ -36,14 +36,13 @@ namespace Subnautica_Enhanced_Sleep
             TirednessGui.Load();
             SleepGui.Load();
             
-            /*
-            if (!wasSleepIntroSent && Player.main.justSpawned)
+            if (!wasSleepIntroSent)
             {
+                wasSleepIntroSent = true;
                 gameStartSleepIntroNotification01.Play();
                 gameStartSleepIntroNotification02.Play();
                 gameStartSleepIntroNotification03.Play();
             }
-            */
         }
 
         public static void onDisable()
@@ -109,7 +108,7 @@ namespace Subnautica_Enhanced_Sleep
                         }
                         */
                         // NEW VARIANT
-                        if ((float) Math.Floor(DayNightCycle.main.GetDay()) >= 8 && !(lastUpdate > ((float)DayNightCycle.main.GetDayNightCycleTime() + (float)Math.Floor(DayNightCycle.main.GetDay()))) )
+                        if ((float) Math.Floor(DayNightCycle.main.GetDay()) >= 12 && !(lastUpdate > ((float)DayNightCycle.main.GetDayNightCycleTime() + (float)Math.Floor(DayNightCycle.main.GetDay()))) )
                         {
                             /*
                             tirednessDict.TryGetValue(__instance, out float playerTiredness);
@@ -178,6 +177,13 @@ namespace Subnautica_Enhanced_Sleep
                                     {
                                         //tiredWarningNotification.Play();
                                     }
+
+                                    if (tiredness >= 100)
+                                    {
+                                        float healthRemoved = (float)(timePassedMinutes / (0.6));
+                                        float healthOut = (float)(__instance.liveMixin.health - healthRemoved);
+                                        __instance.liveMixin.health = healthOut;
+                                    }
                                 }
                             }
                         }
@@ -231,6 +237,23 @@ namespace Subnautica_Enhanced_Sleep
             }
         }
 
+        [HarmonyPatch(typeof(Survival))]
+        [HarmonyPatch("Eat")]
+        public class PlayerEatPatch
+        {
+            public static void Postfix(Survival __instance, GameObject useObj)
+            {
+                if ((UnityEngine.Object) useObj != (UnityEngine.Object) null)
+                {
+                    TechType tt = CraftData.GetTechType(useObj);
+                    if (TechType.Coffee == tt)
+                    {
+                        tiredness -= 2;
+                    }
+                }
+            }
+        }
+
         public static PDANotification gameStartSleepIntroNotification01 = new PDANotification();
         public static PDANotification gameStartSleepIntroNotification02 = new PDANotification();
         public static PDANotification gameStartSleepIntroNotification03 = new PDANotification();
@@ -244,7 +267,7 @@ namespace Subnautica_Enhanced_Sleep
             gameStartSleepIntroNotification01.text = "For your safety, you have been injected with a sleep suppressing serum.";
             gameStartSleepIntroNotification02 = new PDANotification();
             gameStartSleepIntroNotification02.sound = null;
-            gameStartSleepIntroNotification02.text = "Your need for sleep has been removed for 15 days.";
+            gameStartSleepIntroNotification02.text = "Your need for sleep has been removed for 12 days.";
             gameStartSleepIntroNotification03 = new PDANotification();
             gameStartSleepIntroNotification03.sound = null;
             gameStartSleepIntroNotification03.text = "Please try to find a way to sleep as soon as possible.";
@@ -301,6 +324,7 @@ namespace Subnautica_Enhanced_Sleep
         {
             public float _tiredness { get; set; }
             public float _lastUpdate { get; set; }
+            public bool _wasSleepIntroSent { get; set; }
         }
 
         public static void SaveTiredness()
@@ -312,7 +336,8 @@ namespace Subnautica_Enhanced_Sleep
                 TirednessLastUpdateH = tirednessLastUpdateH
                 */
                 _tiredness = tiredness,
-                _lastUpdate = lastUpdate
+                _lastUpdate = lastUpdate,
+                _wasSleepIntroSent = wasSleepIntroSent,
             };
             string sSaveData = JsonConvert.SerializeObject(saveData);
             Directory.CreateDirectory(Main.GetSaveGameDir());
@@ -332,12 +357,14 @@ namespace Subnautica_Enhanced_Sleep
                 */
                 tiredness = saveDataT._tiredness;
                 lastUpdate = saveDataT._lastUpdate;
+                wasSleepIntroSent = saveDataT._wasSleepIntroSent;
             }
             else
             {
                 tiredness = 0;
                 lastUpdate = (float)DayNightCycle.main.GetDayNightCycleTime() +
                              (float)Math.Floor(DayNightCycle.main.GetDay());
+                wasSleepIntroSent = false;
 
             }
         }

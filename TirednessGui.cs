@@ -12,6 +12,7 @@ namespace Subnautica_Enhanced_Sleep
         private static string currentTiredness = "";
         private static float currentTirednessV = 0;
         public static bool isShow = false;
+        public static bool showDevValues = true;
 
         public void Awake()
         {
@@ -25,6 +26,7 @@ namespace Subnautica_Enhanced_Sleep
                 float _tir = Tiredness.tiredness;
                 //Tiredness.tirednessDict.TryGetValue(Player.main, out float _tir);
                 TirednessGui.currentTiredness = "Tir=" + _tir;
+                //TirednessGui.currentTiredness = GameModeUtils.IsOptionActive(GameModeOption.Survival).ToString() + "|" + GameModeUtils.IsOptionActive(GameModeOption.NoSurvival).ToString();
                 TirednessGui.currentTirednessV = ( _tir > 100 ? 100 : _tir);
             }
         }
@@ -43,7 +45,11 @@ namespace Subnautica_Enhanced_Sleep
                 //style.normal.background = Texture2D.blackTexture;
                 style.normal.textColor = Color.white;
                 style.fontSize = 16;
-                GUI.Label(new Rect(100, 100, 400, 100), currentTiredness, style);
+                if (Main.isDev && showDevValues)
+                {
+                    GUI.Label(new Rect(100, 100, 400, 100), currentTiredness, style);
+                }
+
                 Texture2D txBar = new Texture2D(1, 1);
                 txBar.wrapMode = TextureWrapMode.Repeat;
                 txBar.SetPixel(0, 0, new Color(0, 125, 130, 255));
